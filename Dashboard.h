@@ -16,6 +16,7 @@ public:
     bool Initialize();
     void SetBackgroundColor(float r, float g, float b);
     void AddWidget(std::shared_ptr<Widget> widget);
+	ImFont* LoadFont(float size, const std::string& fontPath = "");
     void Run();
     GLFWwindow* GetWindow() const { return window; }
 

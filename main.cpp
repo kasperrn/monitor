@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
     auto chart = std::make_shared<Chart>();
     chart->SetPosition(10, 50);
-    chart->SetSize(300, 150);
+    chart->SetSize(900, 450);
     
     // Customize line color and thickness
     chart->SetLineColor(1.0f, 0.0f, 0.0f);  // Red color
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     dashboard.AddWidget(chart);
 
     auto label = std::make_shared<Label>("Initial Value");
-    label->SetPosition(10, 220);
+    label->SetPosition(10, 520);
     label->SetColor(0.0f, 1.0f, 0.0f);
     dashboard.AddWidget(label);
 

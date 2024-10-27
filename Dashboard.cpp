@@ -22,19 +22,21 @@ bool Dashboard::Initialize() {
         return false;
     }
 
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
     if (kioskMode) {
-   	// Get primary monitor for full-screen mode
+        // Disable window decorations and make full-screen on the primary monitor
+        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
         const GLFWvidmode* mode = glfwGetVideoMode(primaryMonitor);
-
-        // Set width and height to match the monitor's resolution
         width = mode->width;
         height = mode->height;
-
-        // Create a full-screen window without decorations
         window = glfwCreateWindow(width, height, title.c_str(), primaryMonitor, NULL);
     } else {
-        // Create a windowed mode window with decorations
+        // Windowed mode with decorations
+        glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
         window = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
     }
 
@@ -45,16 +47,52 @@ bool Dashboard::Initialize() {
     }
 
     glfwMakeContextCurrent(window);
-    glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
+    glfwSwapInterval(1);
 
-    // Initialize ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 130");
+    ImGui_ImplOpenGL3_Init("#version 100");
+
+    // Hide the cursor if in kiosk mode
+    if (kioskMode) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }
+
+    // Load a default font as fallback
+    LoadFont(16.0f);
 
     return true;
+}
+
+ImFont* Dashboard::LoadFont(float size, const std::string& fontPath) {
+    ImGuiIO& io = ImGui::GetIO();
+    ImFont* font = nullptr;
+
+    if (!fontPath.empty()) {
+        font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), size);
+        if (!font) {
+            std::cerr << "Failed to load font from " << fontPath << ", using default font.\n";
+            font = io.Fonts->AddFontDefault();
+        }
+    } else {
+        font = io.Fonts->AddFontDefault();
+    }
+
+    ImGui_ImplOpenGL3_DestroyFontsTexture();
+    ImGui_ImplOpenGL3_CreateFontsTexture();
+    return font;
+}
+
+void Dashboard::SetBackgroundColor(float r, float g, float b) {
+    bgColor[0] = r;
+    bgColor[1] = g;
+    bgColor[2] = b;
+}
+
+void Dashboard::AddWidget(std::shared_ptr<Widget> widget) {
+    widgets.push_back(widget);
 }
 
 void Dashboard::Cleanup() {
@@ -68,28 +106,13 @@ void Dashboard::Cleanup() {
     }
 }
 
-void Dashboard::SetBackgroundColor(float r, float g, float b) {
-    bgColor[0] = r;
-    bgColor[1] = g;
-    bgColor[2] = b;
-}
-
-void Dashboard::AddWidget(std::shared_ptr<Widget> widget) {
-    widgets.push_back(widget);
-}
-
 void Dashboard::RenderWidgets() {
-    // Get the size of the entire display area
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui::SetNextWindowSize(io.DisplaySize);  // Full-screen size
-    ImGui::SetNextWindowPos(ImVec2(0, 0));     // Position at top-left corner
+    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
 
-    // Begin a full-screen ImGui window without scroll bars
     ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(bgColor[0], bgColor[1], bgColor[2], 1.0f));
 
-    // Render each widget
     for (auto& widget : widgets) {
         widget->Render();
     }
@@ -97,6 +120,7 @@ void Dashboard::RenderWidgets() {
     ImGui::PopStyleColor();
     ImGui::End();
 }
+
 
 void Dashboard::Run() {
     if (!window) {
@@ -112,6 +136,11 @@ void Dashboard::Run() {
             break;
         }
 
+        // Ensure the cursor remains hidden if in kiosk mode
+/*        if (kioskMode) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);//GLFW_CURSOR_HIDDEN);
+        }
+*/
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
